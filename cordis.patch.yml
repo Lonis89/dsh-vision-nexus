@@ -1,0 +1,14 @@
+# dsh-vision-nexus bundle patch：把插件行插入 profile 的插件名册。
+#
+# 这一行同时挂载 Host 半边（服务、调度器、工具、HTTP 路由）与 Client 半边
+# （6 标签页设置面板），由 `dsh.client` 声明驱动。
+#
+# 安装方式：
+#   dsh plugin --profile <profile> add dsh-vision-nexus        （标准，所有用户）
+#   dsh plugin --profile <profile> add link:<本地插件目录绝对路径> （仅源码开发）
+#
+# Windows 示例：dsh plugin --profile desktop add link:E:\plugins\dsh-vision-nexus
+# macOS/Linux： dsh plugin --profile desktop add link:/opt/plugins/dsh-vision-nexus
+- insert:
+    - id: dsh-vision-nexus
+      name: dsh-vision-nexus

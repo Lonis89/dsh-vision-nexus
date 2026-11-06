@@ -1,0 +1,875 @@
+{
+  "manifestVersion": 1,
+  "id": "dsh-vision-nexus",
+  "package": "dsh-vision-nexus",
+  "displayName": {
+    "zh-CN": "视觉中枢",
+    "en-US": "Vision Nexus"
+  },
+  "tagline": {
+    "zh-CN": "面向 DSH Agent 的一体化视觉能力中枢：多后端调度、14 项图像工具、可视化调试工作台与精细化权限管控。",
+    "en-US": "A unified vision capability hub for DSH agents: multi-backend scheduling, 14 image tools, a visual workbench, and fine-grained governance."
+  },
+  "description": {
+    "zh-CN": "dsh-vision-nexus 为纯文本大模型补齐完整图像感知链路。后端抽象层统一接入 OpenAI 兼容多模态 API、Ollama 本地视觉模型、托管 Python 运行时、Tesseract 离线 OCR 与自定义适配器；调度层提供顺序降级、权重轮询、优先本地、最低延迟四种策略，并带熔断冷却与故障自愈；治理层提供内容寻址缓存、全局与单后端配额、单会话并发与超时、Agent 白名单、目录白名单沙盒；观测层为每次请求生成独立 traceId 并持久化链路日志。前端提供 6 个标签页的玻璃拟态控制台，覆盖仪表盘、拖拽调度画布、工具中心、测试工作台、运行时安全设置、配额日志与配置快照。",
+    "en-US": "dsh-vision-nexus completes the image-perception loop for text-only models. The backend abstraction layer unifies OpenAI-compatible multimodal APIs, local Ollama vision models, a managed Python runtime, offline Tesseract OCR and custom adapters. The scheduler offers sequential fallback, weighted round-robin, local-first and lowest-latency selection with circuit-breaker cooldown. Governance covers content-addressed caching, global and per-backend quotas, per-session concurrency and timeouts, an agent allowlist and a directory-allowlist sandbox. Observability assigns every request a traceId and persists the full call chain. The frontend is a six-tab glassmorphic console: dashboard, draggable scheduling canvas, tool center, test workbench, runtime and security settings, and quota/logs/snapshot management."
+  },
+  "version": "0.1.0",
+  "releaseChannel": "beta",
+  "license": "Apache-2.0",
+  "author": {
+    "name": "Lonis89",
+    "url": "https://github.com/Lonis89"
+  },
+  "homepage": "https://github.com/Lonis89/dsh-vision-nexus#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Lonis89/dsh-vision-nexus.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Lonis89/dsh-vision-nexus/issues"
+  },
+  "icon": "icon.svg",
+  "keywords": [
+    "deepseek",
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "vision",
+    "multimodal",
+    "image-understanding",
+    "ocr",
+    "object-detection",
+    "grounding",
+    "image-diff",
+    "background-removal",
+    "svg-trace",
+    "chart-parsing",
+    "qr-code",
+    "ollama",
+    "tesseract",
+    "openai-compatible",
+    "cordis"
+  ],
+  "categories": [
+    "vision",
+    "multimodal",
+    "ocr",
+    "developer-tools",
+    "observability"
+  ],
+  "engines": {
+    "dsh": ">=0.2.1-rc.5",
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "platforms": [
+    "web",
+    "desktop"
+  ],
+  "entry": {
+    "host": {
+      "main": "lib/index.js",
+      "exports": [
+        "name",
+        "inject",
+        "Config",
+        "apply"
+      ]
+    },
+    "client": {
+      "main": "lib/client.js",
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-connection",
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-renderer",
+        "@deepseek-ai/dsh-client-ui-settings"
+      ]
+    },
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "services": {
+    "required": [
+      "webServer",
+      "tools"
+    ],
+    "optional": [
+      "credentials",
+      "attachments",
+      "fs",
+      "subprocess",
+      "directoryPicker",
+      "browserUse"
+    ],
+    "provides": [
+      "visionNexus"
+    ]
+  },
+  "dependencies": {
+    "runtime": [],
+    "optionalRuntime": [
+      "python3 (>=3.10, 托管运行时，用于本地图像算法)",
+      "tesseract (>=5.0, 离线 OCR 兜底)",
+      "ffmpeg (>=6.0, 视频抽帧)"
+    ],
+    "bundled": [
+      "react",
+      "react-dom",
+      "@deepseek-ai/schemastery"
+    ]
+  },
+  "permissions": {
+    "network": {
+      "outbound": true,
+      "schemes": [
+        "http",
+        "https"
+      ],
+      "allowLoopback": true,
+      "defaultTimeoutMs": 30000,
+      "maxResponseBytes": 33554432,
+      "followRedirects": false,
+      "note": "所有对外请求强制超时；响应体超过上限直接中断，避免恶意/异常响应拖垮宿主。"
+    },
+    "filesystem": {
+      "mode": "allowlist",
+      "roots": [
+        "$DSH_HOME/dsh-vision-nexus"
+      ],
+      "maxReadBytes": 33554432,
+      "denyTraversal": true,
+      "note": "所有磁盘读写先解析真实路径再与白名单做前缀比对；越界访问返回 VN_SANDBOX_DENIED 而非静默失败。"
+    },
+    "subprocess": {
+      "allow": [
+        "python",
+        "python3",
+        "py",
+        "tesseract",
+        "ffmpeg"
+      ],
+      "shell": false,
+      "note": "仅以参数数组形式 spawn，禁止 shell 拼接，杜绝命令注入。"
+    },
+    "secrets": {
+      "store": "dsh-credentials",
+      "plaintextInConfig": false,
+      "refPattern": "VISION_NEXUS_{BACKEND_ID}_API_KEY",
+      "note": "密钥只经 ctx.credentials 读写；配置文件与日志中仅出现引用名，永不出现明文。"
+    },
+    "uploads": {
+      "allowedMediaTypes": [
+        "image/png",
+        "image/jpeg",
+        "image/webp",
+        "image/gif",
+        "image/bmp",
+        "image/tiff",
+        "image/svg+xml",
+        "video/mp4",
+        "video/webm",
+        "video/quicktime"
+      ],
+      "maxBytes": 20971520,
+      "magicByteCheck": true,
+      "note": "先校验 MIME 再校验魔数，扩展名不可信。"
+    }
+  },
+  "config": {
+    "schemaSource": "src/index.ts#Config",
+    "note": "这里只列插件级默认值（扁平结构，对应 src/index.ts 的 Schemastery Config）。后端列表、每工具超时、配额、快照等细粒度配置持久化在 $DSH_HOME/dsh-vision-nexus/state.json，由服务层管理，不在此 schema 内。",
+    "properties": {
+      "enabled": {
+        "type": "boolean",
+        "default": true,
+        "note": "总开关。关闭后不注册工具、不注册路由。"
+      },
+      "strategy": {
+        "type": "string",
+        "enum": [
+          "sequential",
+          "weighted-round-robin",
+          "local-first",
+          "lowest-latency"
+        ],
+        "default": "local-first"
+      },
+      "perSessionConcurrency": {
+        "type": "number",
+        "default": 2
+      },
+      "globalConcurrency": {
+        "type": "number",
+        "default": 8
+      },
+      "taskTimeoutMs": {
+        "type": "number",
+        "default": 120000
+      },
+      "circuitThreshold": {
+        "type": "number",
+        "default": 3
+      },
+      "circuitCooldownSec": {
+        "type": "number",
+        "default": 60
+      },
+      "cacheEnabled": {
+        "type": "boolean",
+        "default": true
+      },
+      "cacheTtlSec": {
+        "type": "number",
+        "default": 86400
+      },
+      "logLevel": {
+        "type": "string",
+        "enum": [
+          "debug",
+          "info",
+          "warn",
+          "error"
+        ],
+        "default": "info"
+      },
+      "pythonEnabled": {
+        "type": "boolean",
+        "default": true
+      }
+    }
+  },
+  "capabilities": {
+    "tools": [
+      {
+        "name": "vision_insight",
+        "title": {
+          "zh-CN": "图像理解问答",
+          "en-US": "Image insight"
+        },
+        "summary": {
+          "zh-CN": "描述图片内容、回答关于图片的任意问题。",
+          "en-US": "Describe an image and answer arbitrary questions about it."
+        },
+        "category": "understanding",
+        "backends": [
+          "openai-compat",
+          "ollama",
+          "custom"
+        ],
+        "inputs": [
+          "image",
+          "prompt",
+          "detail"
+        ],
+        "defaults": {
+          "enabled": true,
+          "timeoutMs": 120000,
+          "quotaPerDay": 200
+        }
+      },
+      {
+        "name": "vision_ground",
+        "title": {
+          "zh-CN": "目标定位",
+          "en-US": "Target grounding"
+        },
+        "summary": {
+          "zh-CN": "按自然语言描述定位目标，输出归一化坐标标注框。",
+          "en-US": "Locate a described target and return normalised bounding boxes."
+        },
+        "category": "detection",
+        "backends": [
+          "openai-compat",
+          "ollama",
+          "custom"
+        ],
+        "inputs": [
+          "image",
+          "target",
+          "maxBoxes"
+        ],
+        "defaults": {
+          "enabled": true,
+          "timeoutMs": 120000,
+          "quotaPerDay": 100
+        }
+      },
+      {
+        "name": "vision_detect",
+        "title": {
+          "zh-CN": "通用目标检测",
+          "en-US": "Object detection"
+        },
+        "summary": {
+          "zh-CN": "识别图中全部物体并输出类别、置信度与标注框。",
+          "en-US": "Detect every object with class, confidence and boxes."
+        },
+        "category": "detection",
+        "backends": [
+          "openai-compat",
+          "ollama",
+          "custom"
+        ],
+        "inputs": [
+          "image",
+          "classes",
+          "minConfidence"
+        ],
+        "defaults": {
+          "enabled": true,
+          "timeoutMs": 120000,
+          "quotaPerDay": 100
+        }
+      },
+      {
+        "name": "vision_crop",
+        "title": {
+          "zh-CN": "区域裁剪",
+          "en-US": "Region crop"
+        },
+        "summary": {
+          "zh-CN": "按像素或归一化坐标裁剪图片，可缩放输出。",
+          "en-US": "Crop a region by pixel or normalised coordinates, optionally resizing."
+        },
+        "category": "transform",
+        "backends": [
+          "python-local"
+        ],
+        "inputs": [
+          "image",
+          "region",
+          "scale"
+        ],
+        "defaults": {
+          "enabled": true,
+          "timeoutMs": 30000,
+          "quotaPerDay": 300
+        }
+      },
+      {
+        "name": "vision_image_diff",
+        "title": {
+          "zh-CN": "图片差异比对",
+          "en-US": "Image diff"
+        },
+        "summary": {
+          "zh-CN": "逐像素比对两张图片，输出差异比例、热区图与高亮标注。",
+          "en-US": "Pixel-level comparison with diff ratio, heat map and highlights."
+        },
+        "category": "compare",
+        "backends": [
+          "python-local"
+        ],
+        "inputs": [
+          "image",
+          "imagePath",
+          "imageB",
+          "imagePathB",
+          "threshold",
+          "align"
+        ],
+        "defaults": {
+          "enabled": true,
+          "timeoutMs": 60000,
+          "quotaPerDay": 100
+        }
+      },
+      {
+        "name": "vision_long_ocr",
+        "title": {
+          "zh-CN": "长截图 OCR",
+          "en-US": "Long screenshot OCR"
+        },
+        "summary": {
+          "zh-CN": "长截图、滚动截图分块识别并拼接为顺序文本。",
+          "en-US": "Chunked OCR over long or stitched screenshots, re-joined in order."
+        },
+        "category": "ocr",
+        "backends": [
+          "tesseract",
+          "openai-compat"
+        ],
+        "inputs": [
+          "image",
+          "languages",
+          "layout"
+        ],
+        "defaults": {
+          "enabled": true,
+          "timeoutMs": 180000,
+          "quotaPerDay": 60
+        }
+      },
+      {
+        "name": "vision_remove_bg",
+        "title": {
+          "zh-CN": "前景抠图",
+          "en-US": "Background removal"
+        },
+        "summary": {
+          "zh-CN": "去除背景输出透明 PNG，可指定纯色替换。",
+          "en-US": "Produce a transparent PNG, optionally over a solid colour."
+        },
+        "category": "transform",
+        "backends": [
+          "python-local",
+          "openai-compat",
+          "custom"
+        ],
+        "inputs": [
+          "image",
+          "replaceColor",
+          "edgeFeather"
+        ],
+        "defaults": {
+          "enabled": true,
+          "timeoutMs": 120000,
+          "quotaPerDay": 60
+        }
+      },
+      {
+        "name": "vision_extract_color",
+        "title": {
+          "zh-CN": "主色调提取",
+          "en-US": "Palette extraction"
+        },
+        "summary": {
+          "zh-CN": "提取图片主色调与色值分布，输出 HEX/RGB/HSL。",
+          "en-US": "Extract dominant colours with HEX/RGB/HSL and coverage."
+        },
+        "category": "analysis",
+        "backends": [
+          "python-local"
+        ],
+        "inputs": [
+          "image",
+          "count",
+          "region"
+        ],
+        "defaults": {
+          "enabled": true,
+          "timeoutMs": 30000,
+          "quotaPerDay": 300
+        }
+      },
+      {
+        "name": "vision_html_capture",
+        "title": {
+          "zh-CN": "网页截图",
+          "en-US": "HTML capture"
+        },
+        "summary": {
+          "zh-CN": "对 URL 或 HTML 片段截图，支持视口、整页与设备像素比，用于 UI 视觉验收。",
+          "en-US": "Screenshot a URL or HTML snippet for UI visual acceptance."
+        },
+        "category": "capture",
+        "backends": [
+          "custom"
+        ],
+        "inputs": [
+          "url",
+          "html",
+          "viewport",
+          "fullPage",
+          "deviceScaleFactor"
+        ],
+        "defaults": {
+          "enabled": true,
+          "timeoutMs": 90000,
+          "quotaPerDay": 60
+        }
+      },
+      {
+        "name": "vision_svg_trace",
+        "title": {
+          "zh-CN": "位图矢量化",
+          "en-US": "SVG trace"
+        },
+        "summary": {
+          "zh-CN": "位图描摹为干净 SVG，可调色阶、平滑度与最小路径面积。",
+          "en-US": "Trace a bitmap into clean SVG with tunable colours and smoothing."
+        },
+        "category": "transform",
+        "backends": [
+          "python-local"
+        ],
+        "inputs": [
+          "image",
+          "colorMode",
+          "smoothing",
+          "minArea"
+        ],
+        "defaults": {
+          "enabled": true,
+          "timeoutMs": 120000,
+          "quotaPerDay": 60
+        }
+      },
+      {
+        "name": "vision_batch_ocr",
+        "title": {
+          "zh-CN": "批量 OCR",
+          "en-US": "Batch OCR"
+        },
+        "summary": {
+          "zh-CN": "批量图片识别并汇总导出为结构化文本清单。",
+          "en-US": "OCR many images and export a structured text manifest."
+        },
+        "category": "ocr",
+        "backends": [
+          "tesseract",
+          "openai-compat"
+        ],
+        "inputs": [
+          "images",
+          "languages",
+          "concurrency"
+        ],
+        "defaults": {
+          "enabled": true,
+          "timeoutMs": 300000,
+          "quotaPerDay": 20
+        }
+      },
+      {
+        "name": "vision_video_sample",
+        "title": {
+          "zh-CN": "视频抽帧",
+          "en-US": "Video frame sampling"
+        },
+        "summary": {
+          "zh-CN": "按时间点或间隔抽取关键帧，可直接送入识图链路。",
+          "en-US": "Extract frames by timestamp or interval, ready for vision analysis."
+        },
+        "category": "capture",
+        "backends": [
+          "python-local"
+        ],
+        "inputs": [
+          "video",
+          "timestamps",
+          "intervalSec",
+          "maxFrames"
+        ],
+        "defaults": {
+          "enabled": true,
+          "timeoutMs": 180000,
+          "quotaPerDay": 30
+        }
+      },
+      {
+        "name": "vision_chart_analyze",
+        "title": {
+          "zh-CN": "图表解析",
+          "en-US": "Chart analysis"
+        },
+        "summary": {
+          "zh-CN": "解析折线图、柱状图与表格截图，输出结构化数据表。",
+          "en-US": "Parse line charts, bar charts and table screenshots into structured data."
+        },
+        "category": "analysis",
+        "backends": [
+          "openai-compat",
+          "ollama",
+          "custom"
+        ],
+        "inputs": [
+          "image",
+          "chartType",
+          "axesHint"
+        ],
+        "defaults": {
+          "enabled": true,
+          "timeoutMs": 120000,
+          "quotaPerDay": 60
+        }
+      },
+      {
+        "name": "vision_code_scan",
+        "title": {
+          "zh-CN": "二维码/条形码识别",
+          "en-US": "Code scan"
+        },
+        "summary": {
+          "zh-CN": "识别二维码与一维条码，输出内容、格式与位置。",
+          "en-US": "Decode QR codes and 1D barcodes with format and position."
+        },
+        "category": "ocr",
+        "backends": [
+          "python-local"
+        ],
+        "inputs": [
+          "image",
+          "formats"
+        ],
+        "defaults": {
+          "enabled": true,
+          "timeoutMs": 30000,
+          "quotaPerDay": 300
+        }
+      }
+    ],
+    "routes": [
+      {
+        "method": "GET",
+        "path": "/api/dsh-vision-nexus/overview",
+        "purpose": "Dashboard KPI cards and backend traffic share."
+      },
+      {
+        "method": "GET",
+        "path": "/api/dsh-vision-nexus/series",
+        "purpose": "24-hour latency and volume series."
+      },
+      {
+        "method": "POST",
+        "path": "/api/dsh-vision-nexus/health",
+        "purpose": "Probe every backend, return circuit and quota state."
+      },
+      {
+        "method": "GET",
+        "path": "/api/dsh-vision-nexus/backends",
+        "purpose": "List backends with status lights and order."
+      },
+      {
+        "method": "POST",
+        "path": "/api/dsh-vision-nexus/backends",
+        "purpose": "Create a backend."
+      },
+      {
+        "method": "PUT",
+        "path": "/api/dsh-vision-nexus/backends/{id}",
+        "purpose": "Update a backend."
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/dsh-vision-nexus/backends/{id}",
+        "purpose": "Delete a backend and its credential reference."
+      },
+      {
+        "method": "POST",
+        "path": "/api/dsh-vision-nexus/backends/{id}/test",
+        "purpose": "Single-backend connectivity test."
+      },
+      {
+        "method": "POST",
+        "path": "/api/dsh-vision-nexus/backends/order",
+        "purpose": "Persist canvas drag order as scheduling priority."
+      },
+      {
+        "method": "GET",
+        "path": "/api/dsh-vision-nexus/tools",
+        "purpose": "Tool center cards with per-tool runtime counters."
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/dsh-vision-nexus/tools/{id}",
+        "purpose": "Toggle a tool, change its timeout or quota."
+      },
+      {
+        "method": "POST",
+        "path": "/api/dsh-vision-nexus/tools/bulk",
+        "purpose": "Bulk enable or disable."
+      },
+      {
+        "method": "POST",
+        "path": "/api/dsh-vision-nexus/workbench/upload",
+        "purpose": "Admit an image into the session-scoped buffer store."
+      },
+      {
+        "method": "POST",
+        "path": "/api/dsh-vision-nexus/workbench/run",
+        "purpose": "Execute one tool from the workbench."
+      },
+      {
+        "method": "POST",
+        "path": "/api/dsh-vision-nexus/workbench/cancel",
+        "purpose": "Cancel a running workbench task."
+      },
+      {
+        "method": "GET",
+        "path": "/api/dsh-vision-nexus/workbench/artifact/{id}",
+        "purpose": "Download a workbench artifact (image, SVG, text)."
+      },
+      {
+        "method": "GET",
+        "path": "/api/dsh-vision-nexus/artifacts/{id}",
+        "purpose": "Download any artifact by id, including ones produced by agent tool calls."
+      },
+      {
+        "method": "GET",
+        "path": "/api/dsh-vision-nexus/traces",
+        "purpose": "Paged trace list with filters."
+      },
+      {
+        "method": "GET",
+        "path": "/api/dsh-vision-nexus/traces/{id}",
+        "purpose": "Full call chain for one traceId."
+      },
+      {
+        "method": "GET",
+        "path": "/api/dsh-vision-nexus/logs",
+        "purpose": "Level and keyword filtered log page."
+      },
+      {
+        "method": "GET",
+        "path": "/api/dsh-vision-nexus/logs/export",
+        "purpose": "Download the redacted log file."
+      },
+      {
+        "method": "GET",
+        "path": "/api/dsh-vision-nexus/quota",
+        "purpose": "Global and per-backend quota usage."
+      },
+      {
+        "method": "PUT",
+        "path": "/api/dsh-vision-nexus/quota",
+        "purpose": "Update quota ceilings."
+      },
+      {
+        "method": "GET",
+        "path": "/api/dsh-vision-nexus/settings",
+        "purpose": "Runtime, sandbox, cache and allowlist settings."
+      },
+      {
+        "method": "PUT",
+        "path": "/api/dsh-vision-nexus/settings",
+        "purpose": "Persist settings and re-arm the runtime."
+      },
+      {
+        "method": "GET",
+        "path": "/api/dsh-vision-nexus/cache",
+        "purpose": "Cache size, entry count and hit rate."
+      },
+      {
+        "method": "POST",
+        "path": "/api/dsh-vision-nexus/cache/clear",
+        "purpose": "Purge the content-addressed cache."
+      },
+      {
+        "method": "GET",
+        "path": "/api/dsh-vision-nexus/snapshots",
+        "purpose": "List configuration snapshots."
+      },
+      {
+        "method": "POST",
+        "path": "/api/dsh-vision-nexus/snapshots",
+        "purpose": "Save a snapshot."
+      },
+      {
+        "method": "POST",
+        "path": "/api/dsh-vision-nexus/snapshots/{id}/apply",
+        "purpose": "Switch to a snapshot."
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/dsh-vision-nexus/snapshots/{id}",
+        "purpose": "Delete a snapshot."
+      },
+      {
+        "method": "GET",
+        "path": "/api/dsh-vision-nexus/config/export",
+        "purpose": "Export configuration JSON with secrets stripped."
+      },
+      {
+        "method": "POST",
+        "path": "/api/dsh-vision-nexus/config/import",
+        "purpose": "Import and validate a configuration JSON."
+      },
+      {
+        "method": "POST",
+        "path": "/api/dsh-vision-nexus/python/init",
+        "purpose": "Create the virtual environment and install dependencies."
+      },
+      {
+        "method": "POST",
+        "path": "/api/dsh-vision-nexus/python/health",
+        "purpose": "Health-check the managed Python runtime."
+      },
+      {
+        "method": "GET",
+        "path": "/api/dsh-vision-nexus/dirs",
+        "purpose": "Browse directories for the allowlist picker."
+      },
+      {
+        "method": "POST",
+        "path": "/api/dsh-vision-nexus/dirs/pick",
+        "purpose": "Open the native directory picker on desktop."
+      }
+    ],
+    "ui": {
+      "seat": "settings.section",
+      "slotId": "dsh-vision-nexus",
+      "order": 152,
+      "label": {
+        "zh-CN": "视觉中枢",
+        "en-US": "Vision Nexus"
+      },
+      "tabs": [
+        "dashboard",
+        "canvas",
+        "tools",
+        "workbench",
+        "runtime",
+        "governance"
+      ],
+      "theme": {
+        "followsHostTheme": true,
+        "accent": "deep-blue-to-lilac",
+        "surface": "glassmorphism",
+        "responsive": "stacked-under-960px"
+      }
+    },
+    "credentials": {
+      "refs": [
+        {
+          "pattern": "VISION_NEXUS_{BACKEND_ID}_API_KEY",
+          "scope": "per-backend",
+          "writable": true,
+          "described": "Never returned in plaintext; only configured/writable flags leave the host."
+        }
+      ]
+    },
+    "artifacts": {
+      "saveToWorkspace": true,
+      "kinds": [
+        "image/png",
+        "image/jpeg",
+        "image/svg+xml",
+        "application/json",
+        "text/plain"
+      ]
+    }
+  },
+  "i18n": {
+    "default": "zh-CN",
+    "locales": [
+      "zh-CN",
+      "en-US"
+    ],
+    "files": {
+      "zh-CN": "locale/zh.json",
+      "en-US": "locale/en.json"
+    },
+    "namespace": "dsh-vision-nexus"
+  },
+  "lifecycle": {
+    "mount": "apply",
+    "dispose": "ctx.effect",
+    "hotReload": true,
+    "volatileConfig": true,
+    "singleInstance": true
+  },
+  "telemetry": {
+    "localOnly": true,
+    "uploadsToVendor": false,
+    "note": "所有指标、链路与日志仅落本地 DSH_HOME；插件不向任何第三方上报数据。"
+  },
+  "docs": {
+    "readme": {
+      "zh-CN": "README.md",
+      "en-US": "README.en.md"
+    }
+  }
+}
