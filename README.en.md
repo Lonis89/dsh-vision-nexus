@@ -2,7 +2,7 @@
 
 > A unified vision capability hub for DSH agents: multi-backend scheduling, 14 vision tools, a visual workbench, and fine-grained governance.
 
-[![CI](https://github.com/Lonis89/dsh-vision-nexus/actions/workflows/ci.yml/badge.svg)](https://github.com/Lonis89/dsh-vision-nexus/actions/workflows/ci.yml)
+
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![DSH](https://img.shields.io/badge/DSH-%3E%3D0.2.1--rc.5-6e56cf.svg)](https://github.com/deepseek-ai)
 [![Node](https://img.shields.io/badge/node-%5E22.19%20%7C%7C%20%3E%3D24-339933.svg)](https://nodejs.org)
