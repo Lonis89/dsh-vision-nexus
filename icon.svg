@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36" fill="none">
+  <!-- Vision Nexus: an eye whose pupil is a measurement reticle — seeing plus quantifying. -->
+  <defs>
+    <mask id="vnxLensMask">
+      <rect width="36" height="36" fill="#000"/>
+      <!-- lens interior reveals the background -->
+      <circle cx="18" cy="18" r="6.3" fill="#fff"/>
+    </mask>
+    <clipPath id="vnxLensClip">
+      <circle cx="18" cy="18" r="6.3"/>
+    </clipPath>
+  </defs>
+
+  <!-- eye outline -->
+  <path d="M4 18c4.4-6.1 9.1-9.15 14-9.15S27.6 11.9 32 18c-4.4 6.1-9.1 9.15-14 9.15S8.4 24.1 4 18Z"
+        stroke="#2F6FB2" stroke-width="2.1" stroke-linejoin="round"/>
+
+  <!-- iris ring -->
+  <circle cx="18" cy="18" r="6.3" fill="#2F6FB2" opacity="0.14" mask="url(#vnxLensMask)"/>
+
+  <!-- measurement reticle inside the lens -->
+  <g clip-path="url(#vnxLensClip)" stroke="#2F6FB2" stroke-width="1.5" stroke-linecap="round">
+    <path d="M18 12.6v3.1M18 20.3v3.1M12.6 18h3.1M20.3 18h3.1"/>
+  </g>
+
+  <!-- pupil centre -->
+  <circle cx="18" cy="18" r="1.75" fill="#2F6FB2"/>
+
+  <!-- focus ticks at the lens edge (quantised sight) -->
+  <g stroke="#7FA8D2" stroke-width="1.4" stroke-linecap="round">
+    <path d="M18 8.4v1.5M18 26.1v1.5M8.4 18h1.5M26.1 18h1.5"/>
+  </g>
+</svg>

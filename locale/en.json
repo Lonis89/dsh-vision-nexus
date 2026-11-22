@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "Vision Nexus visual toolkit",
+    "description": "Gives a text-only model measurable vision through tool calls: local CV pixel work, remote vision-language routing, progressive tool loading, session-scoped artifacts and an audit trail.",
+    "detail": "docs/DETAIL.md"
+  }
+}

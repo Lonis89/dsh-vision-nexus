@@ -1,0 +1,63 @@
+{
+  "name": "dsh-vision-nexus",
+  "displayName": "Vision Nexus 多引擎视觉增强",
+  "version": "1.0.0",
+  "description": "给文本主模型提供工具调用链路下的视觉能力：本地 CV 计算引擎 + 远端 VL 路由调度引擎，自动自适应切换、渐进式工具挂载、会话隔离 Artifact、完整审计与降级，并内置 DSH 原生侧边设置面板。",
+  "type": "dsh-plugin",
+  "main": "lib/index.js",
+  "client": "lib/client.js",
+  "patch": "cordis.patch.yml",
+  "inject": ["tools"],
+  "optionalInject": ["attachments", "credentials", "workingDirectory"],
+  "clientInject": ["slots", "locale"],
+  "engines": {
+    "dsh": ">=0.2.0-rc.2",
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "capabilities": {
+    "tools": [
+      "vision_activate",
+      "vision_glance",
+      "vision_detect",
+      "vision_ground",
+      "vision_crop",
+      "vision_long_ocr",
+      "vision_pixel_diff",
+      "vision_extract_foreground",
+      "vision_color_extract",
+      "vision_trace_svg",
+      "vision_html_render_snapshot"
+    ],
+    "loadingStrategy": "progressive",
+    "engines": ["local-cv", "custom-vl", "builtin-vl", "wasm-ocr"],
+    "degradationOrder": ["local-cv", "custom-vl", "builtin-vl", "wasm-ocr"],
+    "sessionIsolation": true,
+    "artifactRegistration": true,
+    "auditTrail": true,
+    "offlineCapable": true,
+    "settingsPanel": true,
+    "hotReload": true
+  },
+  "settings": {
+    "seats": ["plugins.bundle.config", "settings.plugin.item", "web-ui.plugin.item"],
+    "sections": ["运行模式总开关", "引擎配置区", "工具调度策略", "任务限流与超时", "产物与存储", "健康自检面板"],
+    "routes": {
+      "health": "/plugins/dsh-vision-nexus/health",
+      "status": "/plugins/dsh-vision-nexus/status",
+      "probePython": "/plugins/dsh-vision-nexus/probe-python",
+      "probeBrowser": "/plugins/dsh-vision-nexus/probe-browser",
+      "testVl": "/plugins/dsh-vision-nexus/test-vl",
+      "export": "/plugins/dsh-vision-nexus/export"
+    }
+  },
+  "security": {
+    "imageToLlmContext": false,
+    "base64ToLlmContext": false,
+    "credentialsInModelContext": false,
+    "credentialsStorage": "dsh-plugin-config-store (encrypted, keyRef only)",
+    "tempFileAutoCleanup": true,
+    "exportHasNoSecrets": true
+  },
+  "healthCheck": "lib/index.js:healthSelfCheck",
+  "license": "MIT"
+}

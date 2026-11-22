@@ -1,0 +1,30 @@
+# DSH Loader 补丁：把 dsh-vision-nexus 挂载进运行中的插件树。
+# config 仅放非敏感、可下发的默认值；密钥与后端地址明文一律走凭证服务 / 加密配置，
+# 绝不写在这里、也绝不进入模型上下文。全字段在 Config schema 中标记 volatile → 热生效。
+- insert:
+    - id: dsh-vision-nexus
+      name: dsh-vision-nexus
+      config:
+        # ① 运行模式总开关
+        enabled: true
+        runMode: auto
+        loadingStrategy: progressive
+        autoTileEnabled: true
+        oversizeEdgePx: 1600
+        # ② 引擎配置区
+        localCvEnabled: true
+        browserRenderEnabled: true
+        wasmOcrEnabled: true
+        ocrLanguage: mix
+        builtinVlEnabled: false
+        vlBackends: []
+        # ③ 任务调度策略
+        sessionConcurrency: 1
+        taskTimeoutMs: 30000
+        confidenceAlertThreshold: 0.6
+        degradeNotifyAgent: true
+        # ④/⑤ 产物与存储
+        retentionPreset: 24h
+        autoCleanupEnabled: true
+        autoSaveArtifacts: true
+        preprocessQuality: 82

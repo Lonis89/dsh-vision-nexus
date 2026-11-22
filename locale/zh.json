@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "Vision Nexus 视觉增强",
+    "description": "通过工具调用给纯文本模型可量化的视觉能力：本地 CV 像素计算、远端视觉语言模型路由、渐进式工具加载、会话隔离产物与完整审计。",
+    "detail": "docs/DETAIL.md"
+  }
+}
